@@ -8,24 +8,51 @@ from torch.nn import functional as F
 from .SubLayers import MultiHeadAttention, PositionwiseFeedForward
 
 
-class FFTBlock(torch.nn.Module):
-    """FFT Block"""
+# class FFTBlock(torch.nn.Module):
+#     """FFT Block"""
 
-    def __init__(self, d_model, n_head, d_k, d_v, d_inner, kernel_size, dropout=0.1):
+#     def __init__(self, d_model, n_head, d_k, d_v, d_inner, kernel_size, dropout=0.1):
+#         super(FFTBlock, self).__init__()
+#         self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
+#         self.pos_ffn = PositionwiseFeedForward(d_model, d_inner, kernel_size, dropout=dropout)
+
+#     def forward(self, enc_input, mask=None, slf_attn_mask=None):
+#         enc_output, enc_slf_attn = self.slf_attn(enc_input, enc_input, enc_input, mask=slf_attn_mask)
+#         enc_output = enc_output.masked_fill(mask.unsqueeze(-1), 0)
+
+#         enc_output = self.pos_ffn(enc_output)
+#         enc_output = enc_output.masked_fill(mask.unsqueeze(-1), 0)
+
+#         return enc_output, enc_slf_attn
+
+class FFTBlock(nn.Module):
+    """ FFT Block """
+
+    def __init__(self, d_model, n_head, d_k, d_v, d_inner, kernel_size, dropout=0.1, query_projection=False):
         super(FFTBlock, self).__init__()
         self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
-        self.pos_ffn = PositionwiseFeedForward(
-            d_model, d_inner, kernel_size, dropout=dropout
-        )
+        self.pos_ffn = PositionwiseFeedForward(d_model, d_inner, kernel_size, dropout=dropout)
+        self.query_linear = None
+        if query_projection:
+            self.query_linear = nn.Linear(d_model, d_model, bias=True)
 
-    def forward(self, enc_input, mask=None, slf_attn_mask=None):
-        enc_output, enc_slf_attn = self.slf_attn(
-            enc_input, enc_input, enc_input, mask=slf_attn_mask
-        )
-        enc_output = enc_output.masked_fill(mask.unsqueeze(-1), 0)
+
+    def forward(self, enc_input, mask=None, slf_attn_mask=None, hidden_query=None):
+        if hidden_query is not None:
+            if self.query_linear is not None:
+                query = self.query_linear(enc_input + hidden_query)
+            else:
+                query = enc_input
+        else:
+            query = enc_input
+        
+        enc_output, enc_slf_attn = self.slf_attn(query , enc_input, enc_input, mask=slf_attn_mask)
+        if mask is not None:
+            enc_output = enc_output.masked_fill(mask.unsqueeze(-1), 0)
 
         enc_output = self.pos_ffn(enc_output)
-        enc_output = enc_output.masked_fill(mask.unsqueeze(-1), 0)
+        if mask is not None:
+            enc_output = enc_output.masked_fill(mask.unsqueeze(-1), 0)
 
         return enc_output, enc_slf_attn
 

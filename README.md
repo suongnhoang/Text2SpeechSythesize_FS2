@@ -32,7 +32,7 @@ You have to download the [pretrained models](https://drive.google.com/drive/fold
 
 For English single-speaker TTS, run
 ```
-python3 synthesize.py --text "YOUR_DESIRED_TEXT" --restore_step 900000 --mode single -p config/LJSpeech/preprocess.yaml -m config/LJSpeech/model.yaml -t config/LJSpeech/train.yaml
+python synthesize.py --text "bà ơi bà cháu yêu bà lắm . tóc bà trắng, bà trắng như mây" --restore_step 50000 --mode single -p config/Infore/preprocess.yaml -m config/Infore/model.yaml -t config/Infore/train.yaml
 ```
 
 For Mandarin multi-speaker TTS, try
@@ -63,7 +63,7 @@ The pitch/volume/speaking rate of the synthesized utterances can be controlled b
 For example, one can increase the speaking rate by 20 % and decrease the volume by 20 % by
 
 ```
-python3 synthesize.py --text "YOUR_DESIRED_TEXT" --restore_step 900000 --mode single -p config/LJSpeech/preprocess.yaml -m config/LJSpeech/model.yaml -t config/LJSpeech/train.yaml --duration_control 0.8 --energy_control 0.8
+python synthesize.py --text "tớ yêu cậu rất rất nhiều" --restore_step 80000 --mode single -p config/Infore/preprocess.yaml -m config/Infore/model.yaml -t config/Infore/train.yaml --duration_control 0.8 --energy_control 0.8
 ```
 
 # Training
@@ -92,7 +92,7 @@ You have to unzip the files in ``preprocessed_data/LJSpeech/TextGrid/``.
 
 After that, run the preprocessing script by
 ```
-python3 preprocess.py config/LJSpeech/preprocess.yaml
+python preprocess.py config/Infore/preprocess.yaml
 ```
 
 Alternately, you can align the corpus by yourself. 
@@ -107,14 +107,14 @@ or
 
 to align the corpus and then run the preprocessing script.
 ```
-python3 preprocess.py config/LJSpeech/preprocess.yaml
+python preprocess.py config/Infore/preprocess.yaml
 ```
 
 ## Training
 
 Train your model with
 ```
-python3 train.py -p config/LJSpeech/preprocess.yaml -m config/LJSpeech/model.yaml -t config/LJSpeech/train.yaml
+python train.py -p config/Infore/preprocess.yaml -m config/Infore/model.yaml -t config/Infore/train.yaml
 ```
 
 The model takes less than 10k steps (less than 1 hour on my GTX1080Ti GPU) of training to generate audio samples with acceptable quality, which is much more efficient than the autoregressive models such as Tacotron2.
@@ -123,7 +123,7 @@ The model takes less than 10k steps (less than 1 hour on my GTX1080Ti GPU) of tr
 
 Use
 ```
-tensorboard --logdir output/log/LJSpeech
+tensorboard --logdir output/log/Infore
 ```
 
 to serve TensorBoard on your localhost.

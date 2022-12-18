@@ -2,10 +2,14 @@ import os
 import random
 import json
 
-import tgt
+import tgt # TextGridTools for paar GridTools
 import librosa
 import numpy as np
 import pyworld as pw
+# PyWorld wrappers WORLD, which is a free software for high-quality speech analysis,
+# manipulation and synthesis. It can estimate fundamental frequency (F0), 
+# aperiodicity and spectral envelope and also generate the speech like input speech 
+# with only estimated parameters.
 from scipy.interpolate import interp1d
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
@@ -21,6 +25,8 @@ class Preprocessor:
         self.val_size = config["preprocessing"]["val_size"]
         self.sampling_rate = config["preprocessing"]["audio"]["sampling_rate"]
         self.hop_length = config["preprocessing"]["stft"]["hop_length"]
+        print("In: ", self.in_dir)
+        print("Out: ", self.out_dir)
 
         assert config["preprocessing"]["pitch"]["feature"] in [
             "phoneme_level",
@@ -51,12 +57,13 @@ class Preprocessor:
         )
 
     def build_from_path(self):
+        not_exist, fails = 0, 0
         os.makedirs((os.path.join(self.out_dir, "mel")), exist_ok=True)
         os.makedirs((os.path.join(self.out_dir, "pitch")), exist_ok=True)
         os.makedirs((os.path.join(self.out_dir, "energy")), exist_ok=True)
         os.makedirs((os.path.join(self.out_dir, "duration")), exist_ok=True)
 
-        print("Processing Data ...")
+        print("Processing Data ... HELLO KITTY")
         out = list()
         n_frames = 0
         pitch_scaler = StandardScaler()
@@ -66,7 +73,7 @@ class Preprocessor:
         speakers = {}
         for i, speaker in enumerate(tqdm(os.listdir(self.in_dir))):
             speakers[speaker] = i
-            for wav_name in os.listdir(os.path.join(self.in_dir, speaker)):
+            for wav_name in tqdm(os.listdir(os.path.join(self.in_dir, speaker))):
                 if ".wav" not in wav_name:
                     continue
 
@@ -77,10 +84,15 @@ class Preprocessor:
                 if os.path.exists(tg_path):
                     ret = self.process_utterance(speaker, basename)
                     if ret is None:
+                        fails += 1
                         continue
                     else:
                         info, pitch, energy, n = ret
                     out.append(info)
+                else:
+                    print(f"Can not find {tg_path}")
+                    not_exist += 1
+                    continue
 
                 if len(pitch) > 0:
                     pitch_scaler.partial_fit(pitch.reshape((-1, 1)))
@@ -89,6 +101,7 @@ class Preprocessor:
 
                 n_frames += n
 
+        print(f"{not_exist} file can not found!!! and {fails} file failed!!!!!")
         print("Computing statistic quantities ...")
         # Perform normalization if necessary
         if self.pitch_normalization:
@@ -154,13 +167,13 @@ class Preprocessor:
 
     def process_utterance(self, speaker, basename):
         wav_path = os.path.join(self.in_dir, speaker, "{}.wav".format(basename))
-        text_path = os.path.join(self.in_dir, speaker, "{}.lab".format(basename))
+        text_path = os.path.join(self.in_dir, speaker, "{}.txt".format(basename))
         tg_path = os.path.join(
             self.out_dir, "TextGrid", speaker, "{}.TextGrid".format(basename)
         )
 
         # Get alignments
-        textgrid = tgt.io.read_textgrid(tg_path)
+        textgrid = tgt.io.read_textgrid(tg_path, include_empty_intervals=True)
         phone, duration, start, end = self.get_alignment(
             textgrid.get_tier_by_name("phones")
         )
@@ -188,6 +201,7 @@ class Preprocessor:
 
         pitch = pitch[: sum(duration)]
         if np.sum(pitch != 0) <= 1:
+            print(f"np.sum(pitch != 0) <= 1, Exitting!!!")
             return None
 
         # Compute mel-scale spectrogram and energy
@@ -251,7 +265,7 @@ class Preprocessor:
         )
 
     def get_alignment(self, tier):
-        sil_phones = ["sil", "sp", "spn"]
+        sil_phones = ["sil", "sp", "spn", ""]
 
         phones = []
         durations = []
@@ -275,6 +289,8 @@ class Preprocessor:
                 end_idx = len(phones)
             else:
                 # For silent phones
+                if p == "":
+                    p = "sil"
                 phones.append(p)
 
             durations.append(

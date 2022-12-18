@@ -15,7 +15,7 @@ from dataset import Dataset
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def evaluate(model, step, configs, logger=None, vocoder=None):
+def evaluate(model, step, configs, logger=None, vocoder=None, postfix=""):
     preprocess_config, model_config, train_config = configs
 
     # Get dataset
@@ -67,20 +67,20 @@ def evaluate(model, step, configs, logger=None, vocoder=None):
         log(
             logger,
             fig=fig,
-            tag="Validation/step_{}_{}".format(step, tag),
+            tag="Validation{}/step_{}_{}".format(postfix, step, tag),
         )
         sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
         log(
             logger,
             audio=wav_reconstruction,
             sampling_rate=sampling_rate,
-            tag="Validation/step_{}_{}_reconstructed".format(step, tag),
+            tag="Validation{}/step_{}_{}_reconstructed".format(postfix, step, tag),
         )
         log(
             logger,
             audio=wav_prediction,
             sampling_rate=sampling_rate,
-            tag="Validation/step_{}_{}_synthesized".format(step, tag),
+            tag="Validation{}/step_{}_{}_synthesized".format(postfix, step, tag),
         )
 
     return message

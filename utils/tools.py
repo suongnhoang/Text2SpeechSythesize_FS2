@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib
 from scipy.io import wavfile
 from matplotlib import pyplot as plt
-
+import librosa
 
 matplotlib.use("Agg")
 
@@ -208,6 +208,9 @@ def synth_samples(targets, predictions, vocoder, model_config, preprocess_config
     sampling_rate = preprocess_config["preprocessing"]["audio"]["sampling_rate"]
     for wav, basename in zip(wav_predictions, basenames):
         wavfile.write(os.path.join(path, "{}.wav".format(basename)), sampling_rate, wav)
+        # wav, sr = librosa.load(os.path.join(path, "{}.wav".format(basename)), 16000)
+        # wavfile.write(os.path.join(path, "{}.wav".format(basename)), sr, wav)
+
 
 
 def plot_mel(data, stats, titles):

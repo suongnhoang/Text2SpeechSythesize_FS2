@@ -70,7 +70,7 @@ def preprocess_mandarin(text, preprocess_config):
         if p in lexicon:
             phones += lexicon[p]
         else:
-            phones.append("sp")
+            phones.append("spn")
 
     phones = "{" + " ".join(phones) + "}"
     print("Raw Text Sequence: {}".format(text))
@@ -83,10 +83,79 @@ def preprocess_mandarin(text, preprocess_config):
 
     return np.array(sequence)
 
+from viphoneme import vi2IPA_split
+
+N_onsets = { u'b' : u'b', u't' : u't', u'th' : u'tʰ', u'đ' : u'd', u'ch' : u'c', 
+            u'kh' : u'x', u'g' : u'ɣ', u'l' : u'l', u'm' : u'm', u'n': u'n', 
+            u'ngh': u'ŋ', u'nh' : u'ɲ', u'ng' : u'ŋ', u'ph' : u'f', u'v' : u'v', 
+            u'x' : u's', u'd' : u'z', u'h' : u'h', u'p' : u'p', u'qu' : u'kw',
+            u'gi' : u'z', u'tr' : u'c', u'k' : u'k', u'c' : u'k', u'gh' : u'ɣ', 
+            u'r' : u'z', u's' : u's', u'gi': u'z'}
+
+pad = list(set(N_onsets.values()))
+Special=['tʰ','tʰw','p','pw','t','tw','ʈ','ʈw','c','cw','k','kw','k','kw','kw',"'",'b','bw',
+        'd','dw','f','fw','s','sw','ʂ', 'ʂw', 'x', 'xw', 'h', 'hw', 'v', 'vw', 'z', 'zw', 
+        'j', 'jw', 'ʐ', 'ʐw', 'ɣ', 'ɣw', 'ɣ', 'ɣw', 'm', 'mw', 'n', 'nw', 'ɲ', 'ɲw', 
+        'ŋ', 'ŋw', 'ŋ', 'ŋw', 'l', 'lw',"'"]
+pad += Special
+
+def g2p(w):
+    w = w.strip()
+    a = vi2IPA_split(w,"/")\
+            .replace("/./","")\
+            .strip()\
+            .split("/")[1:-1]
+    
+    a = "|".join(a).replace("_", " ")
+    ps = a.split("| |")
+    res = []
+    for a in ps:
+        a = a.split("|")
+        tone = a[-1] if a[-1].isdigit() else None
+        
+        if tone is not None:
+            if int(tone) in [0,1,2,3,4,5,6]:
+                if a[0] in pad:
+                    for i in range(1,len(a)):
+                        a[i] += tone
+                else:
+                    for i in range(0,len(a)):
+                        a[i] += tone
+                    a = ["silp"] + a
+                a = a[:-1]
+        res.extend(a)
+    return res
+
+from text.viphone import valid_symbols
+
+def preprocess_vietnamese(text, preprocess_config):
+    phones = []
+    words = text.strip().split(" ")
+    phonemes = [g2p(word) for word in words]
+    for w in phonemes:
+        w_p = []
+        for p in w:
+            if p not in valid_symbols:
+                w_p.append("sil")
+                break
+            else:
+                w_p.append(p)
+        phones.append(" ".join(w_p))
+
+    phones = "{" + " ".join(phones) + "}"
+    print("Raw Text Sequence: {}".format(text))
+    print("Phoneme Sequence: {}".format(phones))
+    sequence = np.array(
+        text_to_sequence(
+            phones, preprocess_config["preprocessing"]["text"]["text_cleaners"]
+        )
+    )
+    return np.array(sequence)
+
 
 def synthesize(model, step, configs, vocoder, batchs, control_values):
     preprocess_config, model_config, train_config = configs
-    pitch_control, energy_control, duration_control = control_values
+    pitch_control, energy_control, duration_control, alophone_control = control_values
 
     for batch in batchs:
         batch = to_device(batch, device)
@@ -96,7 +165,8 @@ def synthesize(model, step, configs, vocoder, batchs, control_values):
                 *(batch[2:]),
                 p_control=pitch_control,
                 e_control=energy_control,
-                d_control=duration_control
+                d_control=duration_control,
+                alophone_control=alophone_control,
             )
             synth_samples(
                 batch,
@@ -168,6 +238,12 @@ if __name__ == "__main__":
         default=1.0,
         help="control the speed of the whole utterance, larger value for slower speaking rate",
     )
+    parser.add_argument(
+        "--alophone_control",
+        type=float,
+        default=0.0,
+        help="control the speed of the whole utterance, larger value for slower speaking rate",
+    )
     args = parser.parse_args()
 
     # Check source texts
@@ -206,9 +282,11 @@ if __name__ == "__main__":
             texts = np.array([preprocess_english(args.text, preprocess_config)])
         elif preprocess_config["preprocessing"]["text"]["language"] == "zh":
             texts = np.array([preprocess_mandarin(args.text, preprocess_config)])
+        elif preprocess_config["preprocessing"]["text"]["language"] == "vi":
+            texts = np.array([preprocess_vietnamese(args.text, preprocess_config)])
         text_lens = np.array([len(texts[0])])
         batchs = [(ids, raw_texts, speakers, texts, text_lens, max(text_lens))]
 
-    control_values = args.pitch_control, args.energy_control, args.duration_control
+    control_values = args.pitch_control, args.energy_control, args.duration_control, args.alophone_control
 
     synthesize(model, args.restore_step, configs, vocoder, batchs, control_values)
