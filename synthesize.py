@@ -242,7 +242,7 @@ if __name__ == "__main__":
         "--alophone_control",
         type=float,
         default=0.0,
-        help="control the speed of the whole utterance, larger value for slower speaking rate",
+        help="control the variant of the phoneme, larger value more change of changing a phoneme to other",
     )
     args = parser.parse_args()
 
