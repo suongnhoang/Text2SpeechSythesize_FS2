@@ -48,7 +48,7 @@ class FastSpeech2(nn.Module):
                 p_control=1.0,
                 e_control=1.0,
                 d_control=1.0,
-                alophone_control=0.2,
+                alophone_control=1.0,
             ):
         src_masks = get_mask_from_lengths(src_lens, max_src_len)
         mel_masks = get_mask_from_lengths(mel_lens, max_mel_len) if mel_lens is not None else None

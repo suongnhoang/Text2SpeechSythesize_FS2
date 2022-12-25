@@ -10,11 +10,11 @@ optimizer:
   grad_clip_thresh: 1.0
   grad_acc_step: 1
   warm_up_step: 4000
-  anneal_steps: [300000, 400000, 450000]
+  anneal_steps: [5000, 10000, 15000]
   anneal_rate: 0.3
 step:
-  total_step: 500000
+  total_step: 20000
   log_step: 100
   synth_step: 1000
   val_step: 1000
-  save_step: 20000
+  save_step: 2000

@@ -47,15 +47,20 @@ class Encoder(nn.Module):
         kernel_size = config["transformer"]["conv_kernel_size"]
         dropout = config["transformer"]["encoder_dropout"]
         self.v_emb_mod = config["mod"]["variational_embedding"]
+        self.v_pemb_mod = config["mod"]["variational_phoneme_embedding"]
 
         self.max_seq_len = config["max_seq_len"]
         self.d_model = d_model
 
-        if self.v_emb_mod:
+        if self.v_pemb_mod:
             self.src_word_emb_mu = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=Constants.PAD)
             self.src_word_emb_sigma = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=Constants.PAD)
         else:
             self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=Constants.PAD)
+
+        if self.v_emb_mod:
+            self.mu_layer = nn.Linear(d_model, d_model, bias=True)
+            self.sig_layer = nn.Linear(d_model, d_model, bias=True)
 
         position_enc = get_sinusoid_encoding_table(n_position, d_word_vec).unsqueeze(0)
         self.position_enc = nn.Parameter(position_enc, requires_grad=False)
@@ -76,7 +81,7 @@ class Encoder(nn.Module):
         slf_attn_mask = mask.unsqueeze(1).expand(-1, max_len, -1)
 
         # -- Forward
-        if self.v_emb_mod:
+        if self.v_pemb_mod:
             mu = self.src_word_emb_mu(src_seq)
             sigma = self.src_word_emb_sigma(src_seq)
             enc_output = self.reparameterize(mu, sigma, alophone_control)
@@ -93,6 +98,12 @@ class Encoder(nn.Module):
 
         for enc_layer in self.layer_stack:
             enc_output,_ = enc_layer(enc_output, mask=mask, slf_attn_mask=slf_attn_mask)
+        
+        if self.v_emb_mod:
+            mu = self.mu_layer(enc_output)
+            sigma = self.sig_layer(enc_output)
+            enc_output = self.reparameterize(mu, sigma, alophone_control)
+         
         return enc_output
 
 class Generator(nn.Module):
