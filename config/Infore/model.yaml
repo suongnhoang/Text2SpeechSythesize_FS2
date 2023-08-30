@@ -1,4 +1,5 @@
 mod:
+  variational_phoneme_embedding: False
   variational_embedding: False
   excitation_generator: False
 

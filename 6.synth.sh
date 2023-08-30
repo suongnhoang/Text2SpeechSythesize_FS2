@@ -1,0 +1,2 @@
+#bin/bash
+CUDA_VISIBLE_DEVICES=1 python synthesize.py --text "trời ơi là trời . chuyện gì đang xảy ra thế" --restore_step 20000 --mode single -p config/Infore_mod/preprocess.yaml -m config/Infore_mod/model.yaml -t config/Infore_mod/train.yaml --pitch_control 1.0

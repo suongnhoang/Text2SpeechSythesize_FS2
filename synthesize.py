@@ -241,7 +241,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--alophone_control",
         type=float,
-        default=0.0,
+        default=0.2,
         help="control the variant of the phoneme, larger value more change of changing a phoneme to other",
     )
     args = parser.parse_args()
